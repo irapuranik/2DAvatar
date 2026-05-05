@@ -20,7 +20,7 @@ To address this, a browser-deployable virtual patient system was developed that 
 cd virtual-patient-unified-local
 ```
 
-# Backend 
+## Backend 
 ```bash
 cd backend
 cp ../.env.example ../.env
@@ -31,7 +31,7 @@ source .venv/bin/activate
 python3 main.py
 # API: http://127.0.0.1:5001 health: GET /health
 ```
-In a second terminal:
+## In a second terminal:
 ```bash
 cd virtual-patient-unified-local/frontend-react 
 npm install
