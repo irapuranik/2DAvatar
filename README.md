@@ -6,7 +6,7 @@ To address this, a browser-deployable virtual patient system was developed that 
 
 
 
-# Virtual Patient — Unified Local
+# Appendix A - 2D Virtual Patient README
 (React/MUI, cases, admin, practice, assignments)
 ## Prerequisites
 -	Python 3.11+ recommended
@@ -54,5 +54,135 @@ All backends use the same generation flow:
 **Per-case API:** `POST /api/admin/visemes/generate-for-case` with `{ "case_id": "...", "promp
 
 Custom `A.png` is generated when you use **Generate base face from prompt**. 
+
+# Appendix B: Viseme Generation via Gemini
+
+Configuration:
+Set these values in .env (see virtual-patient-unified-local/.env.example):
+`VISEME_IMAGE_BACKEND=gemini`
+# Either key works (`NANOBANANA_API_KEY` is treated as alias)
+`GEMINI_API_KEY=...`
+# or
+`NANOBANANA_API_KEY=...`
+# Optional tuning
+`GEMINI_IMAGE_MODEL=gemini-3.1-flash-image-preview`
+`GEMINI_IMAGE_WIDTH=512`
+`GEMINI_IMAGE_HEIGHT=512`
+`GEMINI_REQUEST_DELAY_S=1.0`
+`GEMINI_MAX_RETRIES=3`
+`GEMINI_RETRY_BACKOFF_S=5.0`
+
+Notes:
+If both keys are set, `GEMINI_API_KEY` is used first.
+If no key is present and backend is gemini, generation fails with a clear error.
+strength is accepted by API for consistency, but Gemini path does not use numeric img2img strength.
+
+API Flow (Admin)
+
+1) Global shape generation
+`POST /api/admin/visemes/generate-from-reference-a`
+Writes to global shapes directory (`frontend-react/public/static/shapes/`).
+Requires existing `A.png` unless `generate_base_face_from_prompt=true`.
+
+Example body:
+{"prompt": "2D cartoon clinician, friendly expression, teal scrubs",
+"character_hint": "female, shoulder-length dark hair, warm skin tone",
+"generate_base_face_from_prompt": true}
+
+2) Per-case generation (recommended)
+`POST /api/admin/visemes/generate-for-case`
+Writes to `frontend-react/public/generated/cases/{case_id}/shapes/`.
+On success, updates case path so practice mode uses generated case-specific shapes.
+
+Example body:
+{"case_id": "your-case-id",
+"prompt": "2D cartoon patient, middle-aged male",
+"character_hint": "brown jacket, neutral lighting",
+"generate_base_face_from_prompt": true}
+
+3) Poll job status
+`GET /api/admin/visemes/jobs/{job_id}`
+Returns status fields like:
+status (queued, running, completed, failed)
+current_viseme
+progress
+written
+error
+Prompting Strategy (Identity Lock)
+Gemini prompts in this project enforce:
+same character identity
+same camera framing/composition
+same pose/head/eyes/hair placement
+same lighting/colors/style
+transparent PNG output
+no text/watermarks/new objects
+Per-viseme instructions only modify the specific mouth/eye target shape.
+This is why character drift is minimized across frames.
+
+Output Files
+Expected generated files:
+`A.png` (base / closed mouth for P/B/M pressure)
+`B.png`
+`C.png`
+`D.png`
+`E.png`
+`F.png`
+`G.png`
+`H.png`
+`X.png` (idle/relaxed closed mouth)
+`blink.png` (eyes closed variant of A)
+
+Error Handling & Troubleshooting
+Common issues and fixes:
+
+“`GEMINI_API_KEY` (or `NANOBANANA_API_KEY`) is required…”
+Add one of the keys and restart backend.
+
+“Gemini response did not contain an image…”
+Verify model supports image output and account/API permissions are valid.
+
+Job fails mid-run due to intermittent API errors
+Increase retry/backoff:
+
+`GEMINI_MAX_RETRIES`
+`GEMINI_RETRY_BACKOFF_S`
+optionally `GEMINI_REQUEST_DELAY_S`
+
+Inconsistent image sizes across frames
+Backend auto-resizes to configured target / reference size, but set consistent:
+`GEMINI_IMAGE_WIDTH`
+`GEMINI_IMAGE_HEIGHT`
+
+Implementation References
+Backend orchestrator: `virtual-patient-unified-local/backend/services/viseme_generation_service.py`
+Admin routes + job queue/polling: `virtual-patient-unified-local/backend/routes/viseme_generation.py`
+Config/env definitions: `virtual-patient-unified-local/backend/config.py`
+Env template values: `virtual-patient-unified-local/.env.example`
+Existing high-level project docs: `virtual-patient-unified-local/README.md`
+
+
+# Appendix C: ElevenLabs Mood and Slider Examples
+
+## ElevenLabs 3-Mood Slider Examples
+These are three practical presets for the virtual patient voice, each paired with a generated ## Mood Presets
+1.	Calm / Cooperative
+-	stability: 0.78
+-	similarity_boost: 0.82
+-	style: 0.20
+-	sample: `docs/presentation/audio/mood_calm.mp3`
+2.	Anxious / Worried
+-	stability: 0.36
+-	similarity_boost: 0.75
+-	style: 0.68
+-	sample: `docs/presentation/audio/mood_anxious.mp3`
+3.	Defensive / Irritable
+-	stability: 0.46
+-	similarity_boost: 0.72
+-	style: 0.74
+-	sample: `docs/presentation/audio/mood_defensive.mp3` ## Notes
+-	Keep the spoken text constant across moods for clean comparisons.
+-	If delivery sounds too flat, increase `style` by 0.05 to 0.10.
+-	If voice identity drifts, increase `similarity_boost` by 0.0
+
 
 
