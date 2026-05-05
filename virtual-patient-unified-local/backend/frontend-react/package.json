@@ -1,0 +1,11 @@
+{
+  "name": "aimii-frontend-launcher",
+  "private": true,
+  "description": "This folder only holds generated public assets. The Vite app is ../frontend-react. These scripts forward there.",
+  "scripts": {
+    "dev": "npm --prefix ../../frontend-react run dev",
+    "build": "npm --prefix ../../frontend-react run build",
+    "preview": "npm --prefix ../../frontend-react run preview",
+    "install-deps": "npm install --prefix ../../frontend-react"
+  }
+}
